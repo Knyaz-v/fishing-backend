@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: fishing-backend
+  profiles:
+    # ./mvnw spring-boot:run без параметров запускается в dev; на сервере SPRING_PROFILES_ACTIVE=prod
+    default: dev
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # схему создаёт только Flyway, Hibernate лишь проверяет, что сущности ей соответствуют
+      ddl-auto: validate
+    # не держим соединение с БД открытым до конца HTTP-запроса: все запросы к БД делает сервис
+    open-in-view: false
+
