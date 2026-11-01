@@ -38,5 +38,8 @@ public class UserEntity {
 
     public UUID getId() { return id; }
     public String getEmail() { return email; }
+    public String getPasswordHash() { return passwordHash; }
     public String getDisplayName() { return displayName; }
+    public Role getRole() { return role; }
+    public boolean isActive() { return isActive; }
 }
