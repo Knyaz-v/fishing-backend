@@ -39,4 +39,5 @@ public class UserEntity {
     public UUID getId() { return id; }
     public String getEmail() { return email; }
     public String getDisplayName() { return displayName; }
+    public Role getRole() { return role; }
 }
