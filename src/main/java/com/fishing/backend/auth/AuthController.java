@@ -29,7 +29,7 @@ public class AuthController {
         return authService.register(request);
     }
 
-    @PostMapping("/???")
+    @PostMapping("/login")
     @Operation(summary = "Вход по email и паролю")
     @ApiResponse(responseCode = "200", description = "Вход выполнен")
     @ApiResponse(responseCode = "400", description = "Некорректные данные")
