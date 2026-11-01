@@ -1,6 +1,7 @@
 package com.fishing.backend.common;
 
 import com.fishing.backend.auth.EmailAlreadyUsedException;
+import com.fishing.backend.auth.InvalidCredentialsException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,11 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(EmailAlreadyUsedException.class)
     public ProblemDetail handleEmailAlreadyUsed() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Пользователь с таким email уже зарегистрирован");
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ProblemDetail handleInvalidCredentials() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Неверный email или пароль");
     }
 
     @ExceptionHandler(Exception.class)
