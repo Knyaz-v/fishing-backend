@@ -97,4 +97,52 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType("application/problem+json"));
     }
+
+    @Test
+    void logsInWithEmailInAnyCase() throws Exception {
+        registerUser("login@example.com", "secret123");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "email": "Login@Example.com", "password": "secret123" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.user.email").value("login@example.com"));
+    }
+
+    @Test
+    void rejectsWrongPassword() throws Exception {
+        registerUser("login@example.com", "secret123");
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "email": "login@example.com", "password": "wrong-pass" }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.detail").value("Неверный email или пароль"));
+    }
+
+    @Test
+    void rejectsUnknownEmailWithSameMessage() throws Exception {
+        // тот же ответ, что при неверном пароле: по нему нельзя узнать, зарегистрирован ли email
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "email": "nobody@example.com", "password": "secret123" }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.detail").value("Неверный email или пароль"));
+    }
+
+    private void registerUser(String email, String password) throws Exception {
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{ \"email\": \"" + email + "\", \"password\": \"" + password + "\", \"displayName\": \"Миша\" }"))
+                .andExpect(status().isCreated());
+    }
 }
