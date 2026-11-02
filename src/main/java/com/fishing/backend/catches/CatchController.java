@@ -6,19 +6,24 @@ import com.fishing.backend.catches.dto.UpdateCatchRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/catches")
 @RequiredArgsConstructor
 @Tag(name = "Уловы", description = "Создание, просмотр, изменение и удаление уловов")
+@SecurityRequirement(name = "bearerAuth")
 public class CatchController {
 
     private final CatchService catchService;
@@ -28,8 +33,11 @@ public class CatchController {
     @Operation(summary = "Создать новый улов", description = "Создает улов. Если передан id, проверяет на дубликат (идемпотентность).")
     @ApiResponse(responseCode = "201", description = "Улов успешно создан")
     @ApiResponse(responseCode = "400", description = "Некорректные данные запроса")
-    public CatchResponse create(@Valid @RequestBody CreateCatchRequest req) {
-        return catchService.create(req);
+    public CatchResponse create(
+            @Valid @RequestBody CreateCatchRequest req,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
+        return catchService.create(req, userId);
     }
 
     @GetMapping("/{id}")
@@ -42,12 +50,11 @@ public class CatchController {
         return catchService.getById(id);
     }
 
-    @Operation(summary = "Получить историю уловов пользователя", description = "Возвращает список всех неудаленных уловов указанного пользователя.")
+    @Operation(summary = "Получить историю уловов текущего пользователя", description = "Возвращает список всех неудаленных уловов текущего пользователя (определяется по токену).")
     @ApiResponse(responseCode = "200", description = "Список уловов")
     @GetMapping
-    public List<CatchResponse> getAll(
-            @Parameter(description = "UUID пользователя", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
-            @RequestParam UUID userId) {
+    public List<CatchResponse> getAll(@AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
         return catchService.getAll(userId);
     }
 

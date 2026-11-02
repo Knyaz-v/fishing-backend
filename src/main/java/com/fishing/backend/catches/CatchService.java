@@ -18,7 +18,7 @@ public class CatchService {
     private final CatchRepository catchRepo;
 
     @Transactional
-    public CatchResponse create(CreateCatchRequest req) {
+    public CatchResponse create(CreateCatchRequest req, UUID userId) {
         if (req.id() != null) {
             Optional<CatchEntity> existing = catchRepo.findById(req.id());
             if (existing.isPresent()) {
@@ -28,7 +28,7 @@ public class CatchService {
 
         CatchEntity newCatch = new CatchEntity();
         newCatch.setId(req.id());
-        newCatch.setUserId(req.userId());
+        newCatch.setUserId(userId);
         newCatch.setWaterBodyId(req.waterBodyId());
         newCatch.setSpeciesId(req.speciesId());
         newCatch.setCaughtAt(req.caughtAt());

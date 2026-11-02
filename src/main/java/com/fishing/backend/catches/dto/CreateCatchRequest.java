@@ -12,10 +12,6 @@ public record CreateCatchRequest(
         // Необязательный ID для идемпотентности (офлайн-режим)
         UUID id,
 
-        // Временно! Пока нет авторизации, клиент передает userId. Позже будем брать из JWT.
-        @NotNull(message = "userId is required")
-        UUID userId,
-
         // ID водоема (может быть null, если ловил не на официальном водоеме)
         Long waterBodyId,
 
