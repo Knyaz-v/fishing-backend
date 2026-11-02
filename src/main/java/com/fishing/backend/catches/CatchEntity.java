@@ -1,8 +1,10 @@
 package com.fishing.backend.catches;
 
+import io.hypersistence.utils.hibernate.type.json.JsonType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Type;
 import org.locationtech.jts.geom.Point;
 
 import java.time.LocalDateTime;
@@ -53,6 +55,7 @@ public class CatchEntity {
     @Column(nullable = false)
     private String visibility = "PRIVATE";
 
+    @Type(JsonType.class)
     @Column(columnDefinition = "jsonb")
     private String weather;
 
