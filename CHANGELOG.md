@@ -3,6 +3,56 @@
 Сюда записываем изменения, после которых другому участнику нужно что-то сделать или знать:
 контракт API, общий код, настройки окружения. Новые записи сверху. Подробности — в PR по ссылке.
 
+## 2026-11-01 — вход и JWT (PR #16)
+
+**Фронтенду**
+- `POST /api/v1/auth/login`, тело `{"email": "...", "password": "..."}` → `200` и `{"accessToken": "...", "user": {"id", "email", "displayName"}}`.
+  Неверный email или пароль → `401` с одним текстом «Неверный email или пароль» в обоих случаях.
+- **Изменение:** `POST /api/v1/auth/register` теперь возвращает тот же формат `{"accessToken", "user"}`, а не только профиль.
+- Токен отправлять в каждом запросе к закрытым адресам: `Authorization: Bearer <accessToken>`.
+  Токен живёт 7 дней; refresh-токенов пока нет — после истечения нужен повторный вход.
+- `GET /api/v1/users/me` — профиль текущего пользователя по токену.
+- Без токена или с недействительным токеном → `401` ProblemDetail «Требуется вход» и заголовок `WWW-Authenticate: Bearer`.
+- **Важно:** просроченный или подделанный токен даёт `401` даже на открытых адресах (карта, карточка водоёма).
+  При `401` удалите сохранённый токен и повторите запрос без него или отправьте пользователя на вход.
+
+**Бэкенду**
+- `id` текущего пользователя в контроллере вместо `@RequestParam UUID userId` (пример — `UserController.me`):
+  ```java
+  public X method(@AuthenticationPrincipal Jwt jwt) {
+      UUID userId = UUID.fromString(jwt.getSubject());
+        //....
+  }
+  ```
+- Закрытые эндпоинты помечайте `@SecurityRequirement(name = "bearerAuth")`: в Swagger у них появится замок,
+  а кнопка **Authorize** позволит вставить токен.
+- В MockMvc-тестах, где контроллер читает `@AuthenticationPrincipal Jwt`, `@WithMockUser` не подойдёт (`jwt` будет `null`).
+  Нужен настоящий токен (пример — `UserControllerTest.registerAndGetToken`) или
+  `.with(SecurityMockMvcRequestPostProcessors.jwt().jwt(j -> j.subject(userId.toString())))` из `spring-security-test`.
+- В `.env` нужен `JWT_SECRET` не короче 32 символов, иначе приложение не стартует. Тесты берут свой секрет из
+  `src/test/resources/application.properties`, `.env` им не нужен.
+
+## 2026-11-01 — Spring Security и регистрация (PR #15)
+
+**Фронтенду**
+- `POST /api/v1/auth/register`, тело `{"email": "...", "password": "...", "displayName": "..."}`
+  → `201` и профиль `{"id": "<uuid>", "email": "...", "displayName": "..."}`. Email возвращается в нижнем регистре.
+  JWT пока не выдаётся: он появится в следующем PR вместе со входом `POST /api/v1/auth/login`.
+- Ограничения: email — корректный адрес до 255 символов; пароль 8–72 символа; `displayName` не пустой, до 100 символов.
+  Нарушение → `400` ProblemDetail (общий текст, без указания поля).
+- Email уже зарегистрирован (регистр букв не важен) → `409` ProblemDetail.
+
+**Всем**
+- Подключён Spring Security. Без входа доступны только: `POST /api/v1/auth/**`, `GET /api/v1/water-bodies`,
+  `GET /api/v1/water-bodies/{id}`, Swagger, `/actuator/health`. Остальные адреса отвечают `403`,
+  пока не появится JWT (следующий PR, тогда ответ для анонима станет `401`).
+
+**Бэкенду**
+- Эндпоинты уловов `/api/v1/catches` после слияния закрыты для анонима. Новый открытый эндпоинт нужно явно
+  добавить в `SecurityConfig.securityFilterChain`.
+- В MockMvc-тестах закрытых эндпоинтов добавляйте `@WithMockUser` (зависимость `spring-boot-starter-security-test`
+  уже подключена), пример — `ErrorHandlingTest`.
+
 ## 2026-10-26 — карточка водоёма (PR #14)
 
 **Фронтенду**
