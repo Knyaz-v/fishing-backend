@@ -5,9 +5,11 @@ import com.fishing.backend.catches.CatchRepository;
 import com.fishing.backend.photo.dto.PhotoDownload;
 import com.fishing.backend.photo.dto.PhotoResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.List;
@@ -40,7 +42,8 @@ public class PhotoService {
         try {
             bytes = file.getBytes();
         } catch (IOException e) {
-            throw new RuntimeException("Failed to read file bytes", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to read file bytes", e);
         }
 
         // 2. Извлечение EXIF
@@ -48,10 +51,12 @@ public class PhotoService {
 
         // 3. Находим улов и проверяем владельца
         CatchEntity catchEntity = catchRepo.findById(catchId)
-                .orElseThrow(() -> new RuntimeException("Catch not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Catch not found"));
 
         if (!catchEntity.getUserId().equals(userId)) {
-            throw new RuntimeException("You don't have permission to add photos to this catch");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You don't have permission to add photos to this catch");
         }
 
         // 4. Обновляем улов данными из EXIF
@@ -99,20 +104,23 @@ public class PhotoService {
     @Transactional(readOnly = true)
     public PhotoDownload download(UUID catchId, UUID photoId, UUID userId) {
         CatchPhotoEntity photo = catchPhotoRepo.findById(photoId)
-                .orElseThrow(() -> new RuntimeException("Photo not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Photo not found"));
 
         if (!photo.getCatchId().equals(catchId)) {
-            throw new RuntimeException("Photo does not belong to this catch");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Photo does not belong to this catch");
         }
 
         CatchEntity catchEntity = catchRepo.findById(catchId)
-                .orElseThrow(() -> new RuntimeException("Catch not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Catch not found"));
 
         boolean isOwner = catchEntity.getUserId().equals(userId);
         boolean isPublic = "PUBLIC".equals(catchEntity.getVisibility());
 
         if (!isOwner && !isPublic) {
-            throw new RuntimeException("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
         byte[] bytes = storageService.load(photo.getStorageKey());
@@ -129,14 +137,15 @@ public class PhotoService {
     public List<PhotoResponse> getPhotosByCatchId(UUID catchId, UUID userId) {
         // 1. Проверяем, что улов существует
         CatchEntity catchEntity = catchRepo.findById(catchId)
-                .orElseThrow(() -> new RuntimeException("Catch not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Catch not found"));
 
         // 2. Проверяем доступ (владелец или публичный улов)
         boolean isOwner = catchEntity.getUserId().equals(userId);
         boolean isPublic = "PUBLIC".equals(catchEntity.getVisibility());
 
         if (!isOwner && !isPublic) {
-            throw new RuntimeException("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
         // 3. Возвращаем список фото в порядке sortOrder
@@ -157,19 +166,22 @@ public class PhotoService {
     public void delete(UUID catchId, UUID photoId, UUID userId) {
         // 1. Находим фото
         CatchPhotoEntity photo = catchPhotoRepo.findById(photoId)
-                .orElseThrow(() -> new RuntimeException("Photo not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Photo not found"));
 
         // 2. Проверяем, что фото принадлежит этому улову
         if (!photo.getCatchId().equals(catchId)) {
-            throw new RuntimeException("Photo does not belong to this catch");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Photo does not belong to this catch");
         }
 
         // 3. Проверяем владельца улова
         CatchEntity catchEntity = catchRepo.findById(catchId)
-                .orElseThrow(() -> new RuntimeException("Catch not found"));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Catch not found"));
 
         if (!catchEntity.getUserId().equals(userId)) {
-            throw new RuntimeException("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
         }
 
         // 4. Удаляем файл с диска
@@ -181,13 +193,14 @@ public class PhotoService {
 
     private void validateFile(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is empty");
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("File size exceeds 5 MB");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File size exceeds 5 MB");
         }
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
-            throw new IllegalArgumentException("Unsupported file type. Allowed: JPEG, PNG, WEBP");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Unsupported file type. Allowed: JPEG, PNG, WEBP");
         }
     }
 }

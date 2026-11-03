@@ -1,7 +1,9 @@
 package com.fishing.backend.photo;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,7 +42,8 @@ public class LocalStorageService implements StorageService {
             return key;
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to store file", e);
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to store file", e);
         }
     }
 
@@ -50,7 +53,8 @@ public class LocalStorageService implements StorageService {
             Path filePath = storagePath.resolve(key);
             return Files.readAllBytes(filePath);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load file", e);
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to load file", e);
         }
     }
 
@@ -60,7 +64,8 @@ public class LocalStorageService implements StorageService {
             Path filePath = storagePath.resolve(key);
             Files.deleteIfExists(filePath);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to delete file", e);
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete file", e);
         }
     }
 }
