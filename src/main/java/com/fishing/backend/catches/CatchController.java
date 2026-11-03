@@ -43,11 +43,14 @@ public class CatchController {
     @GetMapping("/{id}")
     @Operation(summary = "Получить улов по ID")
     @ApiResponse(responseCode = "200", description = "Улов найден")
+    @ApiResponse(responseCode = "403", description = "Нет прав на просмотр")
     @ApiResponse(responseCode = "404", description = "Улов не найден")
     public CatchResponse getById(
             @Parameter(description = "UUID улова", example = "123e4567-e89b-12d3-a456-426614174000")
-            @PathVariable UUID id) {
-        return catchService.getById(id);
+            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
+        return catchService.getById(id, userId);
     }
 
     @Operation(summary = "Получить историю уловов текущего пользователя", description = "Возвращает список всех неудаленных уловов текущего пользователя (определяется по токену).")
@@ -61,22 +64,28 @@ public class CatchController {
     @PatchMapping("/{id}")
     @Operation(summary = "Обновить улов", description = "Частичное обновление полей улова. Передаются только те поля, которые нужно изменить.")
     @ApiResponse(responseCode = "200", description = "Улов обновлен")
+    @ApiResponse(responseCode = "403", description = "Нет прав на изменение")
     @ApiResponse(responseCode = "404", description = "Улов не найден")
     public CatchResponse update(
             @Parameter(description = "UUID улова", example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID id,
-            @RequestBody UpdateCatchRequest req) {
-        return catchService.update(id, req);
+            @RequestBody UpdateCatchRequest req,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
+        return catchService.update(id, req, userId);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Удалить улов", description = "Мягкое удаление: улов помечается как удаленный и больше не возвращается в запросах.")
     @ApiResponse(responseCode = "204", description = "Улов удален")
+    @ApiResponse(responseCode = "403", description = "Нет прав на удаление")
     @ApiResponse(responseCode = "404", description = "Улов не найден")
     public void delete(
             @Parameter(description = "UUID улова", example = "123e4567-e89b-12d3-a456-426614174000")
-            @PathVariable UUID id) {
-        catchService.delete(id);
+            @PathVariable UUID id,
+            @AuthenticationPrincipal Jwt jwt) {
+        UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
+        catchService.delete(id, userId);
     }
 }

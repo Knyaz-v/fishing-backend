@@ -4,8 +4,10 @@ import com.fishing.backend.catches.dto.CatchResponse;
 import com.fishing.backend.catches.dto.CreateCatchRequest;
 import com.fishing.backend.catches.dto.UpdateCatchRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,16 +47,22 @@ public class CatchService {
     }
 
     @Transactional(readOnly = true)
-    public CatchResponse getById(UUID id) {
-        CatchEntity entity = catchRepo.findById(id).orElseThrow(
-                () -> new RuntimeException("Catch not found with id: " + id));
+    public CatchResponse getById(UUID id, UUID userId) {
+        CatchEntity entity = catchRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Catch not found with id: " + id));
+
+        // Проверка владельца
+        if (!entity.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: you are not the owner of this catch");
+        }
 
         return mapToResponse(entity);
     }
 
     @Transactional(readOnly = true)
     public List<CatchResponse> getAll(UUID userId) {
-        // Пока просто находим все уловы пользователя (позже добавим фильтры и пагинацию)
         return catchRepo
                 .findByUserIdAndDeletedAtIsNull(userId)
                 .stream()
@@ -63,9 +71,16 @@ public class CatchService {
     }
 
     @Transactional
-    public CatchResponse update(UUID id, UpdateCatchRequest req) {
-        CatchEntity entity = catchRepo.findById(id).orElseThrow(
-                () -> new RuntimeException("Catch not found with id: " + id));
+    public CatchResponse update(UUID id, UpdateCatchRequest req, UUID userId) {
+        CatchEntity entity = catchRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Catch not found with id: " + id));
+
+        // Проверка владельца
+        if (!entity.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: you are not the owner of this catch");
+        }
 
         if (req.waterBodyId() != null) entity.setWaterBodyId(req.waterBodyId());
         if (req.speciesId() != null) entity.setSpeciesId(req.speciesId());
@@ -83,9 +98,16 @@ public class CatchService {
     }
 
     @Transactional
-    public void delete(UUID id) {
-        CatchEntity entity = catchRepo.findById(id).orElseThrow(
-                () -> new RuntimeException("Catch not found with id: " + id));
+    public void delete(UUID id, UUID userId) {
+        CatchEntity entity = catchRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Catch not found with id: " + id));
+
+        // Проверка владельца
+        if (!entity.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied: you are not the owner of this catch");
+        }
 
         entity.setDeletedAt(LocalDateTime.now());
         catchRepo.save(entity);
