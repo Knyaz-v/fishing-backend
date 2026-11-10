@@ -14,8 +14,15 @@ spring:
       ddl-auto: validate
     # не держим соединение с БД открытым до конца HTTP-запроса: все запросы к БД делает сервис
     open-in-view: false
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
 
 app:
+  storage:
+    # путь для сохранения фото, по умолчанию ./storage
+    path: ${STORAGE_PATH:./storage}
   cors:
     # не секрет, поэтому есть значение по умолчанию: тесты и запуск без .env работают
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
