@@ -40,9 +40,11 @@ public class PhotoController {
             @Parameter(description = "UUID улова", example = "123e4567-e89b-12d3-a456-426614174000")
             @PathVariable UUID catchId,
             @RequestParam("file") MultipartFile file,
+            @Parameter(description = "Обновлять ли дату улова из EXIF фото", example = "true")
+            @RequestParam(value = "updateCaughtAtFromExif", defaultValue = "true") boolean updateCaughtAtFromExif,
             @AuthenticationPrincipal Jwt jwt) {
         UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-        return photoService.upload(catchId, file, userId);
+        return photoService.upload(catchId, file, updateCaughtAtFromExif, userId);
     }
 
     @GetMapping("/{photoId}")

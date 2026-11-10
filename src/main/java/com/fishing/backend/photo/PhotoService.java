@@ -33,7 +33,7 @@ public class PhotoService {
             "image/jpeg", "image/png", "image/webp");
 
     @Transactional
-    public PhotoResponse upload(UUID catchId, MultipartFile file, UUID userId) {
+    public PhotoResponse upload(UUID catchId, MultipartFile file, boolean updateCaughtAtFromExif, UUID userId) {
 
         // 1. Валидация
         validateFile(file);
@@ -60,7 +60,7 @@ public class PhotoService {
         }
 
         // 4. Обновляем улов данными из EXIF
-        if (catchEntity.getCaughtAt() == null && exifData.dateTime() != null) {
+        if (updateCaughtAtFromExif && exifData.dateTime() != null) {
             catchEntity.setCaughtAt(exifData.dateTime());
         }
         if (exifData.location() != null) {
