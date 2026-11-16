@@ -4,6 +4,7 @@ import com.fishing.backend.catches.CatchEntity;
 import com.fishing.backend.catches.CatchRepository;
 import com.fishing.backend.photo.dto.PhotoDownload;
 import com.fishing.backend.photo.dto.PhotoResponse;
+import com.fishing.backend.weather.WeatherService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class PhotoService {
     private final CatchRepository catchRepo;
     private final ExifExtractor exifExtractor;
     private final ExifCleaner exifCleaner;
+    private final WeatherService weatherService;
 
     // Максимальный размер файла (5 МБ)
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -69,6 +71,21 @@ public class PhotoService {
 
         // 5. Сохраняем улов в БД
         catchRepo.save(catchEntity);
+
+        // 5.1. Если есть координаты и дата и погоды ещё нет — запрашиваем погоду
+        if (catchEntity.getLocation() != null &&
+                catchEntity.getCaughtAt() != null &&
+                catchEntity.getWeather() == null) {
+            String weatherJson = weatherService.getWeatherSnapshot(
+                    catchEntity.getLocation().getY(), // широта
+                    catchEntity.getLocation().getX(), // долгота
+                    catchEntity.getCaughtAt()
+            );
+            if (weatherJson != null) {
+                catchEntity.setWeather(weatherJson);
+                catchRepo.save(catchEntity); // сохраняем погоду в улов
+            }
+        }
 
         // 6. Считаем sortOrder
         List<CatchPhotoEntity> existingPhotos = catchPhotoRepo
