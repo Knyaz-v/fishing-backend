@@ -1,14 +1,19 @@
 package com.fishing.backend.catches;
 
+import com.fishing.backend.catches.dto.CatchFilterRequest;
 import com.fishing.backend.catches.dto.CatchResponse;
 import com.fishing.backend.catches.dto.CreateCatchRequest;
 import com.fishing.backend.catches.dto.UpdateCatchRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -111,6 +116,31 @@ public class CatchService {
 
         entity.setDeletedAt(LocalDateTime.now());
         catchRepo.save(entity);
+    }
+
+    @Transactional
+    public Page<CatchResponse> search(UUID userId, CatchFilterRequest filter, Pageable pageable) {
+        Specification<CatchEntity> spec = Specification
+                .where(CatchSpecification.byUserId(userId))
+                .and(CatchSpecification.notDeleted())
+                .and(CatchSpecification.byWaterBodyId(filter.waterBodyId()))
+                .and(CatchSpecification.bySpeciesId(filter.speciesId()))
+                .and(CatchSpecification.byBait(filter.bait()))
+                .and(CatchSpecification.bySeason(filter.season()));
+
+        // Фильтр «в это время в прошлом году»
+        if (filter.aroundDate() != null && filter.windowDays() != null) {
+            LocalDate lastYear = filter.aroundDate().minusYears(1);
+            LocalDate from = lastYear.minusDays(filter.windowDays());
+            LocalDate to = lastYear.plusDays(filter.windowDays());
+
+            spec = spec.and((root, query, criteriaBuilder) ->
+                    criteriaBuilder.between(root.get("caughtAt"),
+                            from.atStartOfDay(),
+                            to.atTime(23,59,59)));
+        }
+
+        return catchRepo.findAll(spec, pageable).map(this::mapToResponse);
     }
 
     private CatchResponse mapToResponse(CatchEntity entity) {
