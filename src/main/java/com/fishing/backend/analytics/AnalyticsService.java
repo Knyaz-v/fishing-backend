@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -16,10 +17,10 @@ public class AnalyticsService {
     private final EventRepository eventRepo;
 
     @Transactional
-    public void record(EventRequest request) {
+    public void record(EventRequest request, UUID userId) {
         EventEntity event = new EventEntity();
         event.setEventType(request.eventType());
-        event.setUserId(request.userId());
+        event.setUserId(userId);
         event.setSessionId(request.sessionId());
         event.setWaterBodyId(request.waterBodyId());
         event.setProperties(request.properties() != null ? request.properties() : "{}");
@@ -33,19 +34,19 @@ public class AnalyticsService {
 
         Map<String, Object> summary = new HashMap<>();
         summary.put("map_opened", eventRepo
-                .countByEventTypeSince("map_opened", from));
+                .countByEventTypeSince(EventType.MAP_OPENED, from));
         summary.put("water_body_viewed", eventRepo
-                .countByEventTypeSince("water_body_viewed", from));
+                .countByEventTypeSince(EventType.WATER_BODY_VIEWED, from));
         summary.put("catch_created", eventRepo
-                .countByEventTypeSince("catch_created", from));
+                .countByEventTypeSince(EventType.CATCH_CREATED, from));
         summary.put("catch_history_viewed", eventRepo
-                .countByEventTypeSince("catch_history_viewed", from));
+                .countByEventTypeSince(EventType.CATCH_HISTORY_VIEWED, from));
 
         // Уникальные пользователи (если нужны)
         summary.put("unique_users_map_opened", eventRepo
-                .countDistinctUsersByEventTypeSince("map_opened", from));
+                .countDistinctUsersByEventTypeSince(EventType.MAP_OPENED, from));
         summary.put("unique_users_catch_created", eventRepo
-                .countDistinctUsersByEventTypeSince("catch_created", from));
+                .countDistinctUsersByEventTypeSince(EventType.CATCH_CREATED, from));
 
         return summary;
     }

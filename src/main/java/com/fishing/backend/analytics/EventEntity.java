@@ -25,7 +25,8 @@ public class EventEntity {
     private String sessionId;
 
     @Column(name = "event_type", nullable = false)
-    private String eventType;
+    @Enumerated(EnumType.STRING)
+    private EventType eventType;
 
     @Column(name = "water_body_id")
     private Long waterBodyId;
