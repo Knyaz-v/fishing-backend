@@ -1,5 +1,6 @@
 package com.fishing.backend.catches;
 
+import com.fishing.backend.catches.dto.CatchFilterRequest;
 import com.fishing.backend.catches.dto.CatchResponse;
 import com.fishing.backend.catches.dto.CreateCatchRequest;
 import com.fishing.backend.catches.dto.UpdateCatchRequest;
@@ -10,6 +11,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -53,12 +58,16 @@ public class CatchController {
         return catchService.getById(id, userId);
     }
 
-    @Operation(summary = "Получить историю уловов текущего пользователя", description = "Возвращает список всех неудаленных уловов текущего пользователя (определяется по токену).")
-    @ApiResponse(responseCode = "200", description = "Список уловов")
     @GetMapping
-    public List<CatchResponse> getAll(@AuthenticationPrincipal Jwt jwt) {
+    @Operation(summary = "История уловов с фильтрами и поиском")
+    public Page<CatchResponse> search(
+            @ModelAttribute CatchFilterRequest filter,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal Jwt jwt) {
         UUID userId = UUID.fromString(Objects.requireNonNull(jwt.getSubject()));
-        return catchService.getAll(userId);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("caughtAt").descending());
+        return catchService.search(userId, filter, pageable);
     }
 
     @PatchMapping("/{id}")
